@@ -28,7 +28,6 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "assets/multi-twitch-chat-overlay.ico",
       "requestedExecutionLevel": "asInvoker"
     },
     "nsis": {
