@@ -1,7 +1,7 @@
 {
-  "name": "sim-racing-chat-overlay",
-  "version": "1.0.0",
-  "description": "Sim Racing Chat Aggregator - Desktop Overlay Application",
+  "name": "multi-twitch-chat-overlay",
+  "version": "1.1.0",
+  "description": "Multi Twitch Chat Overlay - Desktop Overlay Application",
   "main": "electron-main.js",
   "scripts": {
     "electron": "electron .",
@@ -12,8 +12,8 @@
     "dist": "electron-builder"
   },
   "build": {
-    "appId": "com.simracing.chataggregator",
-    "productName": "Sim Racing Chat Overlay",
+    "appId": "com.multitwitch.chataggregator",
+    "productName": "Multi Twitch Chat Overlay",
     "directories": {
       "output": "dist"
     },
@@ -23,11 +23,12 @@
       "overlay-public/**/*",
       "index.js",
       "package.json",
+      "assets/**/*",
       "node_modules/**/*"
     ],
     "win": {
       "target": "nsis",
-      "icon": "assets/icon.ico",
+      "icon": "assets/multi-twitch-chat-overlay.ico",
       "requestedExecutionLevel": "asInvoker"
     },
     "nsis": {

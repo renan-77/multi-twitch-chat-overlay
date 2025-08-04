@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sim Racing Chat Overlay</title>
+    <title>Multi Twitch Chat Overlay</title>
     <style>
         * {
             margin: 0;
@@ -38,15 +38,6 @@
             color: #ff6b35;
             font-weight: bold;
             flex: 1;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .title-bar .title::before {
-            content: "🏎️";
-            font-size: 1.1rem;
-            filter: hue-rotate(270deg); /* Makes it purple */
         }
 
         .title-bar .controls {
@@ -315,7 +306,7 @@
 </head>
 <body>
     <div class="title-bar">
-        <div class="title">🏎️ Sim Racing Chat</div>
+        <div class="title">Multi Twitch Chat Overlay</div>
         <div class="controls">
             <button class="control-btn pin-btn" id="pin-btn" title="Pin Always on Top">📌</button>
             <button class="control-btn minimize-btn" id="minimize-btn" title="Minimize">−</button>

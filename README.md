@@ -1,6 +1,6 @@
-# 🏎️ Sim Racing Chat Overlay
+# 📺 Multi Twitch Chat Overlay
 
-A desktop overlay application for aggregating Twitch chat from multiple sim racing channels in real-time. Perfect for VR racing with vibrant channel colors for quick identification!
+A desktop overlay application for aggregating Twitch chat from multiple channels in real-time. Perfect for streamers, moderators, and viewers who want to monitor multiple streams simultaneously!
 
 ## ✨ Features
 

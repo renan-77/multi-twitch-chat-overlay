@@ -98,10 +98,10 @@ app.get('/health', (req, res) => {
 
 // Start server
 server.listen(PORT, () => {
-    console.log(`🚀 Sim Racing Chat Aggregator`);
+    console.log(`🚀 Multi Twitch Chat Overlay`);
     console.log(`📡 Server running on http://localhost:${PORT}`);
     console.log(`🌐 WebSocket server ready for frontend connections`);
-    console.log(`📺 Monitoring Twitch channels: ${TWITCH_CHANNELS.join(', ')}`);
+    console.log(`📺 Monitoring Twitch channels: ${TWITCH_CHANNELS.map(ch => `#${ch}`).join(', ')}`);
     console.log(`🔗 Setup: http://localhost:${PORT}/setup`);
     console.log(`🔗 Overlay: http://localhost:${PORT}/overlay`);
 });

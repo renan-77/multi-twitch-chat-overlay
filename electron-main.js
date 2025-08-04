@@ -41,7 +41,7 @@ function createWindow() {
             contextIsolation: true,
             preload: path.join(__dirname, 'preload.js')
         },
-        icon: path.join(__dirname, 'assets', 'icon.png'), // Add icon if available
+        icon: path.join(__dirname, 'assets', 'multi-twitch-chat-overlay.ico'),
         titleBarStyle: 'hidden',
         show: false // Don't show until ready
     });

@@ -11,3 +11,4 @@ contextBridge.exposeInMainWorld('electronAPI', {
     startWithChannels: (channels) => ipcRenderer.invoke('start-with-channels', channels),
     getChannels: () => ipcRenderer.invoke('get-channels')
 });
+Auto-scroll enabled
