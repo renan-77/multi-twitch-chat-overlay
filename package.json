@@ -28,6 +28,7 @@
     ],
     "win": {
       "target": "nsis",
+      "icon": "assets/multi-twitch-chat-overlay.png",
       "requestedExecutionLevel": "asInvoker"
     },
     "nsis": {
@@ -39,15 +40,23 @@
   },
   "dependencies": {
     "express": "^4.18.2",
+    "node-fetch": "^2.7.0",
     "tmi.js": "^1.8.5",
-    "ws": "^8.14.2",
-    "node-fetch": "^2.7.0"
+    "ws": "^8.14.2"
   },
   "devDependencies": {
     "electron": "^27.0.0",
     "electron-builder": "^24.6.4"
   },
-  "keywords": ["twitch", "chat", "sim-racing", "overlay", "electron", "vr", "racing"],
+  "keywords": [
+    "twitch",
+    "chat",
+    "sim-racing",
+    "overlay",
+    "electron",
+    "vr",
+    "racing"
+  ],
   "author": "Ren Monteiro",
   "license": "MIT",
   "repository": {
