@@ -1,0 +1,61 @@
+{
+  "name": "sim-racing-chat-overlay",
+  "version": "1.0.0",
+  "description": "Sim Racing Chat Aggregator - Desktop Overlay Application",
+  "main": "electron-main.js",
+  "scripts": {
+    "electron": "electron .",
+    "electron-dev": "NODE_ENV=development electron .",
+    "build-win": "electron-builder --win",
+    "build": "npm run build-win",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "build": {
+    "appId": "com.simracing.chataggregator",
+    "productName": "Sim Racing Chat Overlay",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron-main.js",
+      "preload.js",
+      "overlay-public/**/*",
+      "index.js",
+      "package.json",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "tmi.js": "^1.8.5",
+    "ws": "^8.14.2",
+    "node-fetch": "^2.7.0"
+  },
+  "devDependencies": {
+    "electron": "^27.0.0",
+    "electron-builder": "^24.6.4"
+  },
+  "keywords": ["twitch", "chat", "sim-racing", "overlay", "electron", "vr", "racing"],
+  "author": "Sim Racing Chat Overlay Contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/sim-racing-chat-overlay.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/sim-racing-chat-overlay/issues"
+  },
+  "homepage": "https://github.com/yourusername/sim-racing-chat-overlay#readme"
+}

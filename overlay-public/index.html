@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sim Racing Chat Overlay</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: #ffffff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            -webkit-app-region: no-drag;
+        }
+
+        .title-bar {
+            background: #2d2d2d;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #444;
+            -webkit-app-region: drag;
+            min-height: 32px;
+        }
+
+        .title-bar .title {
+            font-size: 0.9rem;
+            color: #ff6b35;
+            font-weight: bold;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .title-bar .title::before {
+            content: "🏎️";
+            font-size: 1.1rem;
+            filter: hue-rotate(270deg); /* Makes it purple */
+        }
+
+        .title-bar .controls {
+            display: flex;
+            gap: 8px;
+            -webkit-app-region: no-drag;
+        }
+
+        .control-btn {
+            width: 24px;
+            height: 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: background 0.2s;
+        }
+
+        .pin-btn {
+            background: #555;
+            color: white;
+        }
+
+        .pin-btn.active {
+            background: #ff6b35;
+            color: white;
+            box-shadow: 0 0 8px rgba(255, 107, 53, 0.5);
+        }
+
+        .pin-btn:hover {
+            background: #666;
+        }
+
+        .pin-btn.active:hover {
+            background: #ff8555;
+            box-shadow: 0 0 12px rgba(255, 107, 53, 0.7);
+        }
+
+        .minimize-btn {
+            background: #555;
+            color: white;
+        }
+
+        .minimize-btn:hover {
+            background: #666;
+        }
+
+        .close-btn {
+            background: #d32f2f;
+            color: white;
+        }
+
+        .close-btn:hover {
+            background: #f44336;
+        }
+
+        .status-bar {
+            background: #333;
+            padding: 6px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            border-bottom: 1px solid #444;
+        }
+
+        .status-item {
+            padding: 2px 8px;
+            border-radius: 12px;
+            background: #444;
+            font-size: 0.7rem;
+        }
+
+        .status-item.connected {
+            background: #4caf50;
+        }
+
+        .status-item.disconnected {
+            background: #f44336;
+        }
+
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 8px 12px 48px 12px; /* Extra bottom padding for scroll button */
+            background: #111;
+            scroll-behavior: smooth;
+            scrollbar-width: thin;
+            scrollbar-color: #555 #1a1a1a;
+            position: relative;
+        }
+
+        .message {
+            margin-bottom: 8px;
+            padding: 8px;
+            border-radius: 6px;
+            background: #222;
+            border-left: 4px solid #555;
+            animation: fadeIn 0.3s ease-in;
+            font-size: 0.85rem;
+            word-break: break-word;
+            hyphens: auto;
+        }
+
+        .message.twitch {
+            border-left-color: #9146ff;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 4px;
+            font-size: 0.75rem;
+        }
+
+        .platform-badge {
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-size: 0.65rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .platform-badge.twitch {
+            background: #9146ff;
+            color: white;
+        }
+
+        .channel {
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 12px;
+            color: #000;
+            text-shadow: none;
+            font-size: 0.85rem;
+        }
+
+        .username {
+            color: #ff6b35;
+            font-weight: bold;
+        }
+
+        /* Vibrant streamer colors for VR visibility */
+        .channel.streamer-0 { background-color: #FF1493; } /* Deep Pink */
+        .channel.streamer-1 { background-color: #00FF00; } /* Lime Green */
+        .channel.streamer-2 { background-color: #FF4500; } /* Orange Red */
+        .channel.streamer-3 { background-color: #00BFFF; } /* Deep Sky Blue */
+        .channel.streamer-4 { background-color: #FFD700; } /* Gold */
+
+        .timestamp {
+            color: #666;
+            font-size: 0.65rem;
+            margin-left: auto;
+        }
+
+        .message-text {
+            color: #fff;
+            line-height: 1.3;
+            word-wrap: break-word;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .no-messages {
+            text-align: center;
+            color: #666;
+            margin-top: 2rem;
+            font-style: italic;
+            font-size: 0.9rem;
+        }
+
+        /* Scrollbar styling - Enhanced */
+        .chat-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .chat-container::-webkit-scrollbar-track {
+            background: #1a1a1a;
+            border-radius: 4px;
+        }
+
+        .chat-container::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+            border: 1px solid #333;
+        }
+
+        .chat-container::-webkit-scrollbar-thumb:hover {
+            background: #777;
+        }
+
+        .chat-container::-webkit-scrollbar-thumb:active {
+            background: #999;
+        }
+
+        /* Auto-scroll indicator */
+        .scroll-indicator {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: rgba(145, 70, 255, 0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .scroll-indicator.show {
+            opacity: 1;
+        }
+
+        /* Scroll to bottom button */
+        .scroll-to-bottom {
+            position: absolute;
+            bottom: 16px;
+            right: 16px;
+            width: 32px;
+            height: 32px;
+            background: #9146ff;
+            border: none;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            transition: all 0.2s;
+            z-index: 1001;
+        }
+
+        .scroll-to-bottom:hover {
+            background: #7c3ecc;
+            transform: scale(1.1);
+        }
+
+        .scroll-to-bottom.show {
+            display: flex;
+        }
+
+        /* Resize handle */
+        .resize-handle {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 16px;
+            height: 16px;
+            background: linear-gradient(-45deg, transparent 0%, transparent 40%, #666 40%, #666 60%, transparent 60%);
+            cursor: nw-resize;
+            -webkit-app-region: no-drag;
+        }
+    </style>
+</head>
+<body>
+    <div class="title-bar">
+        <div class="title">🏎️ Sim Racing Chat</div>
+        <div class="controls">
+            <button class="control-btn pin-btn" id="pin-btn" title="Pin Always on Top">📌</button>
+            <button class="control-btn minimize-btn" id="minimize-btn" title="Minimize">−</button>
+            <button class="control-btn close-btn" id="close-btn" title="Close">×</button>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <div class="status-item" id="connection-status">Connecting...</div>
+        <div class="status-item" id="message-count">Messages: 0</div>
+    </div>
+
+    <div class="chat-container" id="chat-container">
+        <div class="no-messages" id="no-messages">Waiting for chat messages...</div>
+    </div>
+
+    <div class="scroll-indicator" id="scroll-indicator">Auto-scroll enabled</div>
+    <button class="scroll-to-bottom" id="scroll-to-bottom" title="Scroll to bottom">↓</button>
+
+    <div class="resize-handle"></div>
+
+    <script>
+        class ChatOverlay {
+            constructor() {
+                this.ws = null;
+                this.messageCount = 0;
+                this.maxMessages = 200; // Reduced for overlay
+                this.reconnectAttempts = 0;
+                this.maxReconnectAttempts = 5;
+                this.isAlwaysOnTop = false;
+                this.autoScroll = true;
+                this.scrollThreshold = 50; // pixels from bottom to consider "at bottom"
+                
+                // Vibrant streamer colors for VR visibility
+                this.streamerColors = [
+                    '#FF1493', // Deep Pink
+                    '#00FF00', // Lime Green  
+                    '#FF4500', // Orange Red
+                    '#00BFFF', // Deep Sky Blue
+                    '#FFD700'  // Gold
+                ];
+                this.channelColorMap = new Map(); // Maps channel names to color indices
+                
+                this.chatContainer = document.getElementById('chat-container');
+                this.connectionStatus = document.getElementById('connection-status');
+                this.messageCountElement = document.getElementById('message-count');
+                this.noMessagesElement = document.getElementById('no-messages');
+                this.pinBtn = document.getElementById('pin-btn');
+                this.minimizeBtn = document.getElementById('minimize-btn');
+                this.closeBtn = document.getElementById('close-btn');
+                this.scrollIndicator = document.getElementById('scroll-indicator');
+                this.scrollToBottomBtn = document.getElementById('scroll-to-bottom');
+                
+                this.initializeElectronAPI();
+                this.setupControls();
+                this.setupScrollHandling();
+                this.connect();
+            }
+
+            async initializeElectronAPI() {
+                if (window.electronAPI) {
+                    try {
+                        this.isAlwaysOnTop = await window.electronAPI.getAlwaysOnTopStatus();
+                        this.updatePinButton();
+                    } catch (error) {
+                        console.log('Running in browser mode');
+                    }
+                }
+            }
+
+            setupControls() {
+                // Pin button
+                this.pinBtn.addEventListener('click', async () => {
+                    if (window.electronAPI) {
+                        try {
+                            // First restore window if minimized
+                            await window.electronAPI.restoreWindow();
+                            
+                            // Then toggle always on top
+                            this.isAlwaysOnTop = await window.electronAPI.toggleAlwaysOnTop();
+                            this.updatePinButton();
+                        } catch (error) {
+                            console.error('Failed to toggle always on top:', error);
+                        }
+                    }
+                });
+
+                // Minimize button
+                this.minimizeBtn.addEventListener('click', () => {
+                    if (window.electronAPI) {
+                        window.electronAPI.minimizeWindow();
+                    } else {
+                        window.minimize();
+                    }
+                });
+
+                // Close button
+                this.closeBtn.addEventListener('click', () => {
+                    if (window.electronAPI) {
+                        window.electronAPI.closeWindow();
+                    } else {
+                        window.close();
+                    }
+                });
+
+                // Double-click title bar to restore if minimized
+                document.querySelector('.title-bar').addEventListener('dblclick', () => {
+                    if (window.electronAPI) {
+                        window.electronAPI.restoreWindow();
+                    }
+                });
+            }
+
+            setupScrollHandling() {
+                // Scroll event listener
+                this.chatContainer.addEventListener('scroll', () => {
+                    this.checkScrollPosition();
+                });
+
+                // Scroll to bottom button
+                this.scrollToBottomBtn.addEventListener('click', () => {
+                    this.scrollToBottom(true);
+                });
+
+                // Mouse wheel handling for better scroll control
+                this.chatContainer.addEventListener('wheel', (e) => {
+                    // If user scrolls up, disable auto-scroll temporarily
+                    if (e.deltaY < 0) {
+                        this.autoScroll = false;
+                        this.updateScrollIndicator();
+                    }
+                });
+
+                // Show scroll indicator initially
+                this.showScrollIndicator();
+
+                // Keyboard shortcuts
+                document.addEventListener('keydown', (e) => {
+                    switch(e.key) {
+                        case 'End':
+                            e.preventDefault();
+                            this.scrollToBottom(true);
+                            break;
+                        case 'Home':
+                            e.preventDefault();
+                            this.chatContainer.scrollTop = 0;
+                            this.autoScroll = false;
+                            this.updateScrollIndicator();
+                            break;
+                        case 'PageDown':
+                            e.preventDefault();
+                            this.chatContainer.scrollTop += this.chatContainer.clientHeight * 0.8;
+                            this.autoScroll = false;
+                            this.updateScrollIndicator();
+                            break;
+                        case 'PageUp':
+                            e.preventDefault();
+                            this.chatContainer.scrollTop -= this.chatContainer.clientHeight * 0.8;
+                            this.autoScroll = false;
+                            this.updateScrollIndicator();
+                            break;
+                    }
+                });
+            }
+
+            checkScrollPosition() {
+                const container = this.chatContainer;
+                const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight <= this.scrollThreshold;
+                
+                // Re-enable auto-scroll if user scrolls to bottom
+                if (isAtBottom && !this.autoScroll) {
+                    this.autoScroll = true;
+                    this.updateScrollIndicator();
+                }
+
+                // Show/hide scroll to bottom button
+                if (isAtBottom) {
+                    this.scrollToBottomBtn.classList.remove('show');
+                } else {
+                    this.scrollToBottomBtn.classList.add('show');
+                }
+            }
+
+            scrollToBottom(force = false) {
+                if (this.autoScroll || force) {
+                    this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+                    if (force) {
+                        this.autoScroll = true;
+                        this.updateScrollIndicator();
+                    }
+                }
+            }
+
+            updateScrollIndicator() {
+                if (this.autoScroll) {
+                    this.scrollIndicator.textContent = 'Auto-scroll enabled';
+                    this.scrollIndicator.style.background = 'rgba(145, 70, 255, 0.8)';
+                } else {
+                    this.scrollIndicator.textContent = 'Auto-scroll paused';
+                    this.scrollIndicator.style.background = 'rgba(255, 107, 53, 0.8)';
+                }
+            }
+
+            showScrollIndicator() {
+                this.scrollIndicator.classList.add('show');
+                setTimeout(() => {
+                    this.scrollIndicator.classList.remove('show');
+                }, 2000);
+            }
+
+            showScrollIndicator(message = null, color = null) {
+                if (message) {
+                    this.scrollIndicator.textContent = message;
+                }
+                if (color) {
+                    this.scrollIndicator.style.background = color;
+                }
+                
+                this.scrollIndicator.classList.add('show');
+                setTimeout(() => {
+                    this.scrollIndicator.classList.remove('show');
+                    // Reset to default after hiding
+                    if (message) {
+                        setTimeout(() => {
+                            this.updateScrollIndicator();
+                        }, 300);
+                    }
+                }, 2000);
+            }
+
+            updatePinButton() {
+                if (this.isAlwaysOnTop) {
+                    this.pinBtn.classList.add('active');
+                    this.pinBtn.title = 'Unpin from Top (Currently: Always On Top)';
+                    this.pinBtn.innerHTML = '📌';
+                    
+                    // Show confirmation message
+                    this.showScrollIndicator('Window pinned on top', 'rgba(76, 175, 80, 0.8)');
+                } else {
+                    this.pinBtn.classList.remove('active');
+                    this.pinBtn.title = 'Pin Always on Top';
+                    this.pinBtn.innerHTML = '📌';
+                    
+                    // Show confirmation message
+                    this.showScrollIndicator('Window unpinned', 'rgba(255, 107, 53, 0.8)');
+                }
+            }
+
+            connect() {
+                const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${wsProtocol}//${window.location.host}`;
+                
+                this.ws = new WebSocket(wsUrl);
+                
+                this.ws.onopen = () => {
+                    console.log('Connected to WebSocket server');
+                    this.updateConnectionStatus(true);
+                    this.reconnectAttempts = 0;
+                };
+                
+                this.ws.onmessage = (event) => {
+                    try {
+                        const message = JSON.parse(event.data);
+                        this.addMessage(message);
+                    } catch (error) {
+                        console.error('Error parsing message:', error);
+                    }
+                };
+                
+                this.ws.onclose = () => {
+                    console.log('WebSocket connection closed');
+                    this.updateConnectionStatus(false);
+                    this.attemptReconnect();
+                };
+                
+                this.ws.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    this.updateConnectionStatus(false);
+                };
+            }
+
+            attemptReconnect() {
+                if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                    this.reconnectAttempts++;
+                    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 10000);
+                    
+                    console.log(`Attempting to reconnect in ${delay}ms... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+                    
+                    setTimeout(() => {
+                        this.connect();
+                    }, delay);
+                } else {
+                    console.error('Max reconnection attempts reached');
+                    this.connectionStatus.textContent = 'Connection failed';
+                    this.connectionStatus.className = 'status-item disconnected';
+                }
+            }
+
+            updateConnectionStatus(connected) {
+                if (connected) {
+                    this.connectionStatus.textContent = 'Connected';
+                    this.connectionStatus.className = 'status-item connected';
+                } else {
+                    this.connectionStatus.textContent = 'Disconnected';
+                    this.connectionStatus.className = 'status-item disconnected';
+                }
+            }
+
+            addMessage(message) {
+                // Hide "no messages" text
+                if (this.noMessagesElement) {
+                    this.noMessagesElement.style.display = 'none';
+                }
+
+                // Assign color to channel if not already assigned
+                if (!this.channelColorMap.has(message.channel)) {
+                    const colorIndex = this.channelColorMap.size % this.streamerColors.length;
+                    this.channelColorMap.set(message.channel, colorIndex);
+                }
+
+                // Create message element
+                const messageElement = document.createElement('div');
+                messageElement.className = `message ${message.platform.toLowerCase()}`;
+                
+                const timestamp = new Date(message.timestamp).toLocaleTimeString();
+                const colorIndex = this.channelColorMap.get(message.channel);
+                
+                messageElement.innerHTML = `
+                    <div class="message-header">
+                        <span class="platform-badge ${message.platform.toLowerCase()}">${message.platform}</span>
+                        <span class="channel streamer-${colorIndex}">#${message.channel}</span>
+                        <span class="username">${this.escapeHtml(message.username)}</span>
+                        <span class="timestamp">${timestamp}</span>
+                    </div>
+                    <div class="message-text">${this.escapeHtml(message.message)}</div>
+                `;
+                
+                // Add to chat container
+                this.chatContainer.appendChild(messageElement);
+                
+                // Update message count
+                this.messageCount++;
+                this.messageCountElement.textContent = `Messages: ${this.messageCount}`;
+                
+                // Remove old messages if we exceed the limit
+                if (this.chatContainer.children.length > this.maxMessages) {
+                    this.chatContainer.removeChild(this.chatContainer.firstChild);
+                }
+                
+                // Auto-scroll to bottom if enabled
+                this.scrollToBottom();
+                
+                // Check scroll position after adding message
+                setTimeout(() => this.checkScrollPosition(), 100);
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+        }
+
+        // Initialize the chat overlay when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new ChatOverlay();
+        });
+    </script>
+</body>
+</html>

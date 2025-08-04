@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup - Sim Racing Chat Overlay</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: #ffffff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            -webkit-app-region: no-drag;
+        }
+
+        .title-bar {
+            background: #2d2d2d;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #444;
+            -webkit-app-region: drag;
+            min-height: 32px;
+        }
+
+        .title-bar .title {
+            font-size: 0.9rem;
+            color: #ff6b35;
+            font-weight: bold;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .title-bar .title::before {
+            content: "🏎️";
+            font-size: 1.1rem;
+            filter: hue-rotate(270deg); /* Makes it purple */
+        }
+
+        .title-bar .controls {
+            display: flex;
+            gap: 8px;
+            -webkit-app-region: no-drag;
+        }
+
+        .control-btn {
+            width: 24px;
+            height: 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: background 0.2s;
+            background: #555;
+            color: white;
+        }
+
+        .control-btn:hover {
+            background: #666;
+        }
+
+        .close-btn {
+            background: #d32f2f;
+        }
+
+        .close-btn:hover {
+            background: #f44336;
+        }
+
+        .setup-container {
+            flex: 1;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-y: auto;
+            overflow-x: hidden;
+            max-width: 500px;
+            margin: 0 auto;
+            width: 100%;
+            /* Better scrollbar styling */
+            scrollbar-width: thin;
+            scrollbar-color: #ff6b35 #2d2d2d;
+        }
+
+        .setup-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .setup-container::-webkit-scrollbar-track {
+            background: #2d2d2d;
+            border-radius: 4px;
+        }
+
+        .setup-container::-webkit-scrollbar-thumb {
+            background: #ff6b35;
+            border-radius: 4px;
+        }
+
+        .setup-container::-webkit-scrollbar-thumb:hover {
+            background: #ff8c35;
+        }
+
+        .setup-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .setup-header h1 {
+            color: #ff6b35;
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+        }
+
+        .setup-header p {
+            color: #ccc;
+            font-size: 1rem;
+            line-height: 1.4;
+        }
+
+        .channels-section {
+            width: 100%;
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .channel-input-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            gap: 8px;
+        }
+
+        .channel-input {
+            flex: 1;
+            padding: 12px 16px;
+            background: #333;
+            border: 2px solid #555;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        .channel-input:focus {
+            outline: none;
+            border-color: #9146ff;
+        }
+
+        .channel-input::placeholder {
+            color: #888;
+        }
+
+        .remove-btn {
+            width: 36px;
+            height: 36px;
+            background: #d32f2f;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .remove-btn:hover {
+            background: #f44336;
+        }
+
+        .remove-btn:disabled {
+            background: #555;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .add-channel-btn {
+            width: 100%;
+            padding: 12px;
+            background: #444;
+            border: 2px dashed #666;
+            border-radius: 8px;
+            color: #ccc;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .add-channel-btn:hover:not(:disabled) {
+            background: #555;
+            border-color: #9146ff;
+            color: #fff;
+        }
+
+        .add-channel-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .channel-limit {
+            font-size: 0.85rem;
+            color: #888;
+            text-align: center;
+            margin-top: 8px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 16px;
+            width: 100%;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 14px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary {
+            background: #555;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #666;
+        }
+
+        .btn-primary {
+            background: #9146ff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #7c3ecc;
+        }
+
+        .btn:disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        .validation-message {
+            color: #f44336;
+            font-size: 0.85rem;
+            margin-top: 4px;
+            display: none;
+        }
+
+        .example-channels {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+            width: 100%;
+        }
+
+        .example-channels h3 {
+            color: #ff6b35;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+
+        .example-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .example-tag {
+            background: #9146ff;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .example-tag:hover {
+            background: #7c3ecc;
+        }
+
+        /* Scrollbar styling for setup screen */
+        .setup-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .setup-container::-webkit-scrollbar-track {
+            background: #1a1a1a;
+            border-radius: 4px;
+        }
+
+        .setup-container::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+            border: 1px solid #333;
+        }
+
+        .setup-container::-webkit-scrollbar-thumb:hover {
+            background: #777;
+        }
+    </style>
+</head>
+<body>
+    <div class="title-bar">
+        <div class="title">🏎️ Setup - Sim Racing Chat</div>
+        <div class="controls">
+            <button class="control-btn close-btn" id="close-btn" title="Close">×</button>
+        </div>
+    </div>
+
+    <div class="setup-container">
+        <div class="setup-header">
+            <h1>Welcome to Sim Racing Chat Overlay!</h1>
+            <p>Configure your Twitch channels to start aggregating chat messages.<br>
+            Add up to 5 channels to monitor simultaneously.</p>
+        </div>
+
+        <div class="example-channels">
+            <h3>Popular Sim Racing Streamers:</h3>
+            <div class="example-list">
+                <span class="example-tag" data-channel="brz_ren">brz_ren</span>
+                <span class="example-tag" data-channel="vavo_tv">vavo_tv</span>
+                <span class="example-tag" data-channel="fuzzyrjtv">fuzzyrjtv</span>
+            </div>
+        </div>
+
+        <div class="channels-section">
+            <div class="section-title">
+                📺 Twitch Channels
+            </div>
+            
+            <div id="channel-inputs">
+                <!-- Channel inputs will be dynamically added here -->
+            </div>
+            
+            <button class="add-channel-btn" id="add-channel-btn">
+                <span>➕</span>
+                <span>Add Channel</span>
+            </button>
+            
+            <div class="channel-limit">
+                <span id="channel-count">0</span> / 5 channels configured
+            </div>
+            
+            <div class="validation-message" id="validation-message"></div>
+        </div>
+
+        <div class="actions">
+            <button class="btn btn-secondary" id="load-defaults-btn">Load Example Channels</button>
+            <button class="btn btn-primary" id="start-btn" disabled>Start Chat Overlay</button>
+        </div>
+    </div>
+
+    <script>
+        class SetupManager {
+            constructor() {
+                this.channels = [];
+                this.maxChannels = 5;
+                
+                this.channelInputsContainer = document.getElementById('channel-inputs');
+                this.addChannelBtn = document.getElementById('add-channel-btn');
+                this.startBtn = document.getElementById('start-btn');
+                this.loadDefaultsBtn = document.getElementById('load-defaults-btn');
+                this.closeBtn = document.getElementById('close-btn');
+                this.channelCount = document.getElementById('channel-count');
+                this.validationMessage = document.getElementById('validation-message');
+                
+                this.setupEventListeners();
+                this.loadSavedChannels();
+                this.addInitialChannel();
+            }
+
+            setupEventListeners() {
+                this.addChannelBtn.addEventListener('click', () => this.addChannel());
+                this.startBtn.addEventListener('click', () => this.startOverlay());
+                this.loadDefaultsBtn.addEventListener('click', () => this.loadDefaultChannels());
+                this.closeBtn.addEventListener('click', () => this.closeApp());
+                
+                // Example channel tags
+                document.querySelectorAll('.example-tag').forEach(tag => {
+                    tag.addEventListener('click', () => {
+                        const channel = tag.dataset.channel;
+                        this.addChannelWithValue(channel);
+                    });
+                });
+            }
+
+            loadSavedChannels() {
+                try {
+                    const saved = localStorage.getItem('twitchChannels');
+                    if (saved) {
+                        const channels = JSON.parse(saved);
+                        channels.forEach(channel => this.addChannelWithValue(channel));
+                    }
+                } catch (error) {
+                    console.error('Failed to load saved channels:', error);
+                }
+            }
+
+            saveChannels() {
+                try {
+                    localStorage.setItem('twitchChannels', JSON.stringify(this.channels));
+                } catch (error) {
+                    console.error('Failed to save channels:', error);
+                }
+            }
+
+            addInitialChannel() {
+                if (this.channels.length === 0) {
+                    this.addChannel();
+                }
+            }
+
+            addChannel(value = '') {
+                if (this.channels.length >= this.maxChannels) {
+                    this.showValidation('Maximum 5 channels allowed');
+                    return;
+                }
+
+                const inputGroup = document.createElement('div');
+                inputGroup.className = 'channel-input-group';
+                
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'channel-input';
+                input.placeholder = 'Enter Twitch channel name (e.g., brz_ren)';
+                input.value = value;
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-btn';
+                removeBtn.innerHTML = '×';
+                removeBtn.title = 'Remove channel';
+                
+                // Event listeners
+                input.addEventListener('input', () => this.updateChannelList());
+                input.addEventListener('blur', () => this.validateChannel(input));
+                removeBtn.addEventListener('click', () => this.removeChannel(inputGroup));
+                
+                inputGroup.appendChild(input);
+                inputGroup.appendChild(removeBtn);
+                this.channelInputsContainer.appendChild(inputGroup);
+                
+                this.updateChannelList();
+                this.updateUI();
+                
+                // Focus the new input
+                if (!value) {
+                    input.focus();
+                }
+            }
+
+            addChannelWithValue(value) {
+                if (this.channels.length < this.maxChannels && !this.channels.includes(value)) {
+                    this.addChannel(value);
+                }
+            }
+
+            removeChannel(inputGroup) {
+                inputGroup.remove();
+                this.updateChannelList();
+                this.updateUI();
+            }
+
+            updateChannelList() {
+                const inputs = this.channelInputsContainer.querySelectorAll('.channel-input');
+                this.channels = Array.from(inputs)
+                    .map(input => input.value.trim().toLowerCase())
+                    .filter(channel => channel !== '');
+                
+                this.saveChannels();
+                this.updateUI();
+                this.hideValidation();
+            }
+
+            validateChannel(input) {
+                const value = input.value.trim();
+                if (value) {
+                    // Remove invalid characters and convert to lowercase
+                    const cleaned = value.toLowerCase().replace(/[^a-z0-9_]/g, '');
+                    if (cleaned !== value.toLowerCase()) {
+                        input.value = cleaned;
+                        this.updateChannelList();
+                    }
+                }
+            }
+
+            updateUI() {
+                this.channelCount.textContent = this.channels.length;
+                
+                // Update add button state
+                this.addChannelBtn.disabled = this.channels.length >= this.maxChannels;
+                
+                // Update start button state
+                this.startBtn.disabled = this.channels.length === 0;
+                
+                // Update remove button states
+                const removeButtons = this.channelInputsContainer.querySelectorAll('.remove-btn');
+                removeButtons.forEach(btn => {
+                    btn.disabled = this.channelInputsContainer.children.length <= 1;
+                });
+            }
+
+            loadDefaultChannels() {
+                // Clear existing channels
+                this.channelInputsContainer.innerHTML = '';
+                
+                // Add default channels
+                const defaultChannels = ['brz_ren', 'vavo_tv', 'fuzzyrjtv'];
+                defaultChannels.forEach(channel => this.addChannel(channel));
+            }
+
+            showValidation(message) {
+                this.validationMessage.textContent = message;
+                this.validationMessage.style.display = 'block';
+                setTimeout(() => this.hideValidation(), 3000);
+            }
+
+            hideValidation() {
+                this.validationMessage.style.display = 'none';
+            }
+
+            async startOverlay() {
+                if (this.channels.length === 0) {
+                    this.showValidation('Please add at least one channel');
+                    return;
+                }
+
+                // Save configuration
+                this.saveChannels();
+
+                // Send channels to main process
+                if (window.electronAPI && window.electronAPI.startWithChannels) {
+                    try {
+                        await window.electronAPI.startWithChannels(this.channels);
+                    } catch (error) {
+                        console.error('Failed to start overlay:', error);
+                        this.showValidation('Failed to start overlay. Please try again.');
+                    }
+                } else {
+                    // Fallback for browser mode - redirect to overlay with channels as URL params
+                    const channelParams = this.channels.map(c => `channels[]=${encodeURIComponent(c)}`).join('&');
+                    window.location.href = `/overlay?${channelParams}`;
+                }
+            }
+
+            closeApp() {
+                if (window.electronAPI && window.electronAPI.closeWindow) {
+                    window.electronAPI.closeWindow();
+                } else {
+                    window.close();
+                }
+            }
+        }
+
+        // Initialize setup manager when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new SetupManager();
+        });
+    </script>
+</body>
+</html>

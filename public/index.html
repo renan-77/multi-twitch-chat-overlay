@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sim Racing Chat Aggregator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: #ffffff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: #2d2d2d;
+            padding: 1rem;
+            border-bottom: 2px solid #444;
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #ff6b35;
+            margin-bottom: 0.5rem;
+        }
+
+        .status {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .status-item {
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            background: #444;
+        }
+
+        .status-item.connected {
+            background: #4caf50;
+        }
+
+        .status-item.disconnected {
+            background: #f44336;
+        }
+
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            background: #111;
+        }
+
+        .message {
+            margin-bottom: 0.75rem;
+            padding: 0.5rem;
+            border-radius: 6px;
+            background: #222;
+            border-left: 4px solid #555;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .message.twitch {
+            border-left-color: #9146ff;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.25rem;
+            font-size: 0.85rem;
+        }
+
+        .platform-badge {
+            padding: 0.15rem 0.4rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .platform-badge.twitch {
+            background: #9146ff;
+            color: white;
+        }
+
+        .channel {
+            color: #888;
+            font-weight: bold;
+        }
+
+        .username {
+            color: #ff6b35;
+            font-weight: bold;
+        }
+
+        .timestamp {
+            color: #666;
+            font-size: 0.75rem;
+            margin-left: auto;
+        }
+
+        .message-text {
+            color: #fff;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        .footer {
+            background: #2d2d2d;
+            padding: 0.5rem;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #888;
+            border-top: 1px solid #444;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .no-messages {
+            text-align: center;
+            color: #666;
+            margin-top: 2rem;
+            font-style: italic;
+        }
+
+        /* Scrollbar styling */
+        .chat-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .chat-container::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        .chat-container::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+
+        .chat-container::-webkit-scrollbar-thumb:hover {
+            background: #777;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏎️ Sim Racing Chat Aggregator</h1>
+        <div class="status">
+            <div class="status-item" id="connection-status">Connecting...</div>
+            <div class="status-item" id="message-count">Messages: 0</div>
+        </div>
+    </div>
+
+    <div class="chat-container" id="chat-container">
+        <div class="no-messages" id="no-messages">Waiting for chat messages...</div>
+    </div>
+
+    <div class="footer">
+        Aggregating Twitch chat messages in real-time from sim racing channels
+    </div>
+
+    <script>
+        class ChatAggregator {
+            constructor() {
+                this.ws = null;
+                this.messageCount = 0;
+                this.maxMessages = 500; // Limit messages to prevent memory issues
+                this.reconnectAttempts = 0;
+                this.maxReconnectAttempts = 5;
+                
+                this.chatContainer = document.getElementById('chat-container');
+                this.connectionStatus = document.getElementById('connection-status');
+                this.messageCountElement = document.getElementById('message-count');
+                this.noMessagesElement = document.getElementById('no-messages');
+                
+                this.connect();
+            }
+
+            connect() {
+                const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${wsProtocol}//${window.location.host}`;
+                
+                this.ws = new WebSocket(wsUrl);
+                
+                this.ws.onopen = () => {
+                    console.log('Connected to WebSocket server');
+                    this.updateConnectionStatus(true);
+                    this.reconnectAttempts = 0;
+                };
+                
+                this.ws.onmessage = (event) => {
+                    try {
+                        const message = JSON.parse(event.data);
+                        this.addMessage(message);
+                    } catch (error) {
+                        console.error('Error parsing message:', error);
+                    }
+                };
+                
+                this.ws.onclose = () => {
+                    console.log('WebSocket connection closed');
+                    this.updateConnectionStatus(false);
+                    this.attemptReconnect();
+                };
+                
+                this.ws.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    this.updateConnectionStatus(false);
+                };
+            }
+
+            attemptReconnect() {
+                if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                    this.reconnectAttempts++;
+                    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 10000);
+                    
+                    console.log(`Attempting to reconnect in ${delay}ms... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+                    
+                    setTimeout(() => {
+                        this.connect();
+                    }, delay);
+                } else {
+                    console.error('Max reconnection attempts reached');
+                    this.connectionStatus.textContent = 'Connection failed';
+                    this.connectionStatus.className = 'status-item disconnected';
+                }
+            }
+
+            updateConnectionStatus(connected) {
+                if (connected) {
+                    this.connectionStatus.textContent = 'Connected';
+                    this.connectionStatus.className = 'status-item connected';
+                } else {
+                    this.connectionStatus.textContent = 'Disconnected';
+                    this.connectionStatus.className = 'status-item disconnected';
+                }
+            }
+
+            addMessage(message) {
+                // Hide "no messages" text
+                if (this.noMessagesElement) {
+                    this.noMessagesElement.style.display = 'none';
+                }
+
+                // Create message element
+                const messageElement = document.createElement('div');
+                messageElement.className = `message ${message.platform.toLowerCase()}`;
+                
+                const timestamp = new Date(message.timestamp).toLocaleTimeString();
+                
+                messageElement.innerHTML = `
+                    <div class="message-header">
+                        <span class="platform-badge ${message.platform.toLowerCase()}">${message.platform}</span>
+                        <span class="channel">#${message.channel}</span>
+                        <span class="username">${this.escapeHtml(message.username)}</span>
+                        <span class="timestamp">${timestamp}</span>
+                    </div>
+                    <div class="message-text">${this.escapeHtml(message.message)}</div>
+                `;
+                
+                // Add to chat container
+                this.chatContainer.appendChild(messageElement);
+                
+                // Update message count
+                this.messageCount++;
+                this.messageCountElement.textContent = `Messages: ${this.messageCount}`;
+                
+                // Remove old messages if we exceed the limit
+                if (this.chatContainer.children.length > this.maxMessages) {
+                    this.chatContainer.removeChild(this.chatContainer.firstChild);
+                }
+                
+                // Auto-scroll to bottom
+                this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+        }
+
+        // Initialize the chat aggregator when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new ChatAggregator();
+        });
+    </script>
+</body>
+</html>
