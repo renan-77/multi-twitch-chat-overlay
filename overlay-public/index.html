@@ -35,7 +35,7 @@
 
         .title-bar .title {
             font-size: 0.9rem;
-            color: #ff6b35;
+            color: #9146ff;
             font-weight: bold;
             flex: 1;
         }
@@ -65,9 +65,9 @@
         }
 
         .pin-btn.active {
-            background: #ff6b35;
+            background: #9146ff;
             color: white;
-            box-shadow: 0 0 8px rgba(255, 107, 53, 0.5);
+            box-shadow: 0 0 8px rgba(145, 70, 255, 0.5);
         }
 
         .pin-btn:hover {
@@ -75,8 +75,17 @@
         }
 
         .pin-btn.active:hover {
-            background: #ff8555;
-            box-shadow: 0 0 12px rgba(255, 107, 53, 0.7);
+            background: #7c3ecc;
+            box-shadow: 0 0 12px rgba(145, 70, 255, 0.7);
+        }
+
+        .back-btn {
+            background: #9146ff;
+            color: white;
+        }
+
+        .back-btn:hover {
+            background: #7c3ecc;
         }
 
         .minimize-btn {
@@ -308,6 +317,7 @@
     <div class="title-bar">
         <div class="title">Multi Twitch Chat Overlay</div>
         <div class="controls">
+            <button class="control-btn back-btn" id="back-btn" title="Back to Setup">←</button>
             <button class="control-btn pin-btn" id="pin-btn" title="Pin Always on Top">📌</button>
             <button class="control-btn minimize-btn" id="minimize-btn" title="Minimize">−</button>
             <button class="control-btn close-btn" id="close-btn" title="Close">×</button>
@@ -354,6 +364,7 @@
                 this.connectionStatus = document.getElementById('connection-status');
                 this.messageCountElement = document.getElementById('message-count');
                 this.noMessagesElement = document.getElementById('no-messages');
+                this.backBtn = document.getElementById('back-btn');
                 this.pinBtn = document.getElementById('pin-btn');
                 this.minimizeBtn = document.getElementById('minimize-btn');
                 this.closeBtn = document.getElementById('close-btn');
@@ -378,6 +389,16 @@
             }
 
             setupControls() {
+                // Back button
+                this.backBtn.addEventListener('click', () => {
+                    if (window.electronAPI && window.electronAPI.loadSetup) {
+                        window.electronAPI.loadSetup();
+                    } else {
+                        // Fallback for browser mode
+                        window.location.href = '/setup';
+                    }
+                });
+
                 // Pin button
                 this.pinBtn.addEventListener('click', async () => {
                     if (window.electronAPI) {

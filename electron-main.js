@@ -7,7 +7,7 @@ let serverApp;
 async function startIntegratedServer() {
     try {
         // Set environment variables
-        process.env.PORT = '3002';
+        process.env.PORT = '3005';
         process.env.TWITCH_CHANNELS = configuredChannels.length > 0 ? configuredChannels.join(',') : 'brz_ren,vavo_tv,fuzzyrjtv';
         
         // Require and start the server in the same process
@@ -53,7 +53,7 @@ function createWindow() {
         const maxRetries = 10;
         
         function tryLoadSetup() {
-            mainWindow.loadURL('http://localhost:3002/setup').catch((error) => {
+            mainWindow.loadURL('http://localhost:3005/setup').catch((error) => {
                 console.log(`Failed to load setup page (attempt ${retryCount + 1}):`, error.message);
                 retryCount++;
                 if (retryCount < maxRetries) {
@@ -103,14 +103,14 @@ function createWindow() {
 ipcMain.handle('toggle-always-on-top', () => {
     if (mainWindow) {
         isAlwaysOnTop = !isAlwaysOnTop;
-        
+
         // Set always on top with explicit level parameter for Windows
         if (process.platform === 'win32') {
             mainWindow.setAlwaysOnTop(isAlwaysOnTop, 'screen-saver');
         } else {
             mainWindow.setAlwaysOnTop(isAlwaysOnTop);
         }
-        
+
         // Ensure window is visible and focused when pinning
         if (isAlwaysOnTop) {
             if (mainWindow.isMinimized()) {
@@ -119,8 +119,8 @@ ipcMain.handle('toggle-always-on-top', () => {
             mainWindow.show();
             mainWindow.focus();
         }
-        
-        console.log(`Always on top: ${isAlwaysOnTop} (level: ${isAlwaysOnTop ? 'floating' : 'normal'})`);
+
+        console.log(`Always on top: ${isAlwaysOnTop} (level: ${isAlwaysOnTop ? 'screen-saver' : 'normal'})`);
         return isAlwaysOnTop;
     }
     return false;
@@ -152,6 +152,17 @@ ipcMain.handle('get-always-on-top-status', () => {
     return isAlwaysOnTop;
 });
 
+ipcMain.handle('load-setup', () => {
+    if (mainWindow) {
+        // Navigate to the setup page and resize window for setup mode
+        mainWindow.setSize(450, 400);
+        mainWindow.setMinimumSize(350, 250);
+        mainWindow.loadURL('http://localhost:3005/setup');
+        return true;
+    }
+    return false;
+});
+
 ipcMain.handle('start-with-channels', async (event, channels) => {
     if (channels && channels.length > 0) {
         configuredChannels = channels;
@@ -159,13 +170,23 @@ ipcMain.handle('start-with-channels', async (event, channels) => {
         // Update environment variables for new channels
         process.env.TWITCH_CHANNELS = channels.join(',');
         
+        // Update the server's channels dynamically
+        if (global.updateTwitchChannels) {
+            try {
+                await global.updateTwitchChannels(channels);
+                console.log(`Updated Twitch channels to: ${channels.join(', ')}`);
+            } catch (error) {
+                console.error('Failed to update Twitch channels:', error);
+            }
+        }
+        
         // Wait for server to start and then load the overlay
         setTimeout(() => {
             if (mainWindow) {
                 // Resize window for overlay mode - more vertical-friendly
                 mainWindow.setSize(400, 350);
                 mainWindow.setMinimumSize(300, 200);
-                mainWindow.loadURL('http://localhost:3002/overlay');
+                mainWindow.loadURL('http://localhost:3005/overlay');
             }
         }, 2000);
         

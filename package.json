@@ -1,6 +1,6 @@
 {
   "name": "multi-twitch-chat-overlay",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Multi Twitch Chat Overlay - Desktop Overlay Application",
   "main": "electron-main.js",
   "scripts": {

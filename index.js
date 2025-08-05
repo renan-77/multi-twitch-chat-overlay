@@ -18,17 +18,91 @@ const server = require('http').createServer(app);
 const wss = new WebSocket.Server({ server });
 
 // Configuration
-const TWITCH_CHANNELS = process.env.TWITCH_CHANNELS 
+let TWITCH_CHANNELS = process.env.TWITCH_CHANNELS 
     ? process.env.TWITCH_CHANNELS.split(',').map(ch => ch.trim())
     : ['brz_ren', 'vavo_tv', 'fuzzyrjtv'];
 
 // Store WebSocket connections
 const clients = new Set();
 
+// Twitch Chat Setup
+let twitchClient = new tmi.Client({
+    connection: {
+        secure: true,
+        reconnect: true
+    },
+    channels: TWITCH_CHANNELS
+});
+
+// Function to update channels dynamically
+async function updateChannels(newChannels) {
+    if (!newChannels || !Array.isArray(newChannels) || newChannels.length === 0) {
+        console.log('Invalid channels provided, keeping current channels');
+        return;
+    }
+    
+    // Clean and validate channel names
+    const cleanChannels = newChannels
+        .map(ch => ch.trim().toLowerCase().replace(/[^a-z0-9_]/g, ''))
+        .filter(ch => ch.length > 0)
+        .slice(0, 5); // Limit to 5 channels
+    
+    if (cleanChannels.length === 0) {
+        console.log('No valid channels provided');
+        return;
+    }
+    
+    console.log(`Updating channels from [${TWITCH_CHANNELS.join(', ')}] to [${cleanChannels.join(', ')}]`);
+    
+    try {
+        // Disconnect from current channels
+        if (twitchClient && twitchClient.readyState() === 'OPEN') {
+            for (const channel of TWITCH_CHANNELS) {
+                try {
+                    await twitchClient.part(channel);
+                    console.log(`Left channel: ${channel}`);
+                } catch (error) {
+                    console.log(`Failed to leave channel ${channel}:`, error.message);
+                }
+            }
+        }
+        
+        // Update the channels list
+        TWITCH_CHANNELS = cleanChannels;
+        
+        // Join new channels
+        for (const channel of TWITCH_CHANNELS) {
+            try {
+                await twitchClient.join(channel);
+                console.log(`Joined channel: ${channel}`);
+            } catch (error) {
+                console.log(`Failed to join channel ${channel}:`, error.message);
+            }
+        }
+        
+        console.log(`✅ Successfully updated to channels: ${TWITCH_CHANNELS.map(ch => `#${ch}`).join(', ')}`);
+        
+    } catch (error) {
+        console.error('Error updating channels:', error);
+    }
+}
+
 // WebSocket server for frontend connections
 wss.on('connection', (ws) => {
     console.log('Frontend client connected');
     clients.add(ws);
+    
+    // Handle messages from frontend
+    ws.on('message', async (data) => {
+        try {
+            const message = JSON.parse(data);
+            if (message.type === 'updateChannels' && message.channels) {
+                await updateChannels(message.channels);
+            }
+        } catch (error) {
+            console.error('Error handling WebSocket message:', error);
+        }
+    });
     
     ws.on('close', () => {
         console.log('Frontend client disconnected');
@@ -45,15 +119,6 @@ function broadcastMessage(message) {
         }
     });
 }
-
-// Twitch Chat Setup
-const twitchClient = new tmi.Client({
-    connection: {
-        secure: true,
-        reconnect: true
-    },
-    channels: TWITCH_CHANNELS
-});
 
 twitchClient.connect().then(() => {
     console.log('Connected to Twitch');
@@ -87,6 +152,25 @@ app.get('/setup', (req, res) => {
     res.sendFile(path.join(__dirname, 'overlay-public', 'setup.html'));
 });
 
+// API endpoint to update channels
+app.post('/api/channels', express.json(), async (req, res) => {
+    try {
+        const { channels } = req.body;
+        await updateChannels(channels);
+        res.json({ 
+            success: true, 
+            channels: TWITCH_CHANNELS,
+            message: 'Channels updated successfully' 
+        });
+    } catch (error) {
+        console.error('API Error updating channels:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+});
+
 app.get('/health', (req, res) => {
     res.json({
         status: 'ok',
@@ -114,3 +198,6 @@ process.on('SIGTERM', () => {
         process.exit(0);
     });
 });
+
+// Expose updateChannels function globally for Electron integration
+global.updateTwitchChannels = updateChannels;
